@@ -135,6 +135,21 @@ function Project({ pid, onBack }) {
       <button onClick={onBack}>← 项目列表</button>
       <h2>{project.name}</h2>
       <details>
+        <summary>初始素材（文字 / 图片 / 已有视频）</summary>
+        <ul>{(project.inputs || []).map((i, n) => (
+          <li key={n}>{i.type === 'text' ? `📝 ${i.ref}` : (
+            i.type === 'video'
+              ? <video controls width="200" src={`/api/projects/${pid}/inputs/${i.name}`} />
+              : <a href={`/api/projects/${pid}/inputs/${i.name}`} target="_blank">🖼 {i.name}</a>)}
+          </li>))}</ul>
+        <input type="file" accept="image/*,video/*" onChange={async e => {
+          const f = e.target.files[0]; if (!f) return
+          const fd = new FormData(); fd.append('file', f)
+          await fetch(`/api/projects/${pid}/inputs`, { method: 'POST', body: fd })
+          refresh()
+        }} />
+      </details>
+      <details>
         <summary>项目提示词 / Skills</summary>
         <textarea rows={3} defaultValue={project.project_prompt} onBlur={async e => {
           await api(`/projects/${pid}`, { method: 'PATCH', body: JSON.stringify({ project_prompt: e.target.value }) })

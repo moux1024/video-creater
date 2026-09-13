@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -198,6 +199,37 @@ def build_app(config: AppConfig | None = None, projects_dir: Path | None = None)
         except ProjectError as ex:
             raise HTTPException(404, str(ex))
         if not p.exists() or p.is_dir():
+            raise HTTPException(404, "file not found")
+        return FileResponse(p)
+
+    # ---------------- initial materials (images / existing video) ----------------
+    @app.post("/api/projects/{pid}/inputs")
+    async def upload_input(pid: str, file: UploadFile):
+        """Initial material upload: image or existing video, stored under inputs/."""
+        try:
+            state = app.state.store.get(pid)
+            inputs_dir = app.state.store._pdir(pid) / "inputs"
+        except ProjectError as ex:
+            raise HTTPException(404, str(ex))
+        if file.filename is None:
+            raise HTTPException(400, "missing filename")
+        fname = re.sub(r"[^A-Za-z0-9._\-\u4e00-\u9fff]", "_", file.filename)
+        kind = "video" if (file.content_type or "").startswith("video") else "image"
+        data = await file.read()
+        if len(data) > 200 * 1024 * 1024:
+            raise HTTPException(413, "file too large (max 200MB)")
+        (inputs_dir / fname).write_bytes(data)
+        state["inputs"].append({"type": kind, "ref": f"inputs/{fname}", "name": fname})
+        app.state.store._save(pid, state)
+        return {"ok": True, "inputs": state["inputs"]}
+
+    @app.get("/api/projects/{pid}/inputs/{fname}")
+    def get_input(pid: str, fname: str):
+        try:
+            p = app.state.store._pdir(pid) / "inputs" / Path(fname).name
+        except ProjectError as ex:
+            raise HTTPException(404, str(ex))
+        if not p.exists():
             raise HTTPException(404, "file not found")
         return FileResponse(p)
 
