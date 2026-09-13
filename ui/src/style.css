@@ -1,0 +1,21 @@
+* { box-sizing: border-box; }
+body { font-family: -apple-system, "PingFang SC", sans-serif; margin: 0; background: #f6f7f9; color: #222; }
+header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: #1e293b; color: #fff; }
+header h1 { font-size: 18px; cursor: pointer; margin: 0; }
+.page { padding: 16px 20px; }
+.board { display: flex; gap: 12px; overflow-x: auto; padding: 12px 0; }
+.col { min-width: 220px; background: #fff; border-radius: 8px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.col h3 { font-size: 14px; margin: 4px 0 8px; }
+.card { background: #fafafa; border: 1px solid #ddd; border-radius: 6px; padding: 8px; margin-top: 8px; cursor: pointer; font-size: 13px; }
+.card:hover { background: #f0f4ff; }
+.stale { color: #e65100; margin-left: 6px; }
+.cur { color: #1565c0; margin-left: 6px; font-size: 11px; }
+.empty { color: #999; font-size: 12px; }
+.drawer { position: fixed; right: 0; top: 0; bottom: 0; width: 480px; background: #fff; padding: 16px; overflow-y: auto; box-shadow: -2px 0 8px rgba(0,0,0,.15); }
+.drawer pre { background: #f4f4f4; padding: 8px; font-size: 11px; overflow-x: auto; }
+.events { max-height: 260px; overflow-y: auto; }
+.shot { margin: 6px 0; font-size: 13px; }
+textarea, input, select { width: 100%; margin: 4px 0; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+fieldset { border: 1px solid #ddd; border-radius: 6px; margin: 10px 0; }
+button { background: #1565c0; color: #fff; border: 0; border-radius: 4px; padding: 6px 12px; cursor: pointer; margin: 4px 4px 4px 0; }
+button:disabled { background: #999; }
