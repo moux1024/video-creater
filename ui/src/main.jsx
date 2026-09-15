@@ -111,12 +111,94 @@ function RunDrawer({ pid, stage, runId, onClose, refresh }) {
   )
 }
 
+function ReadinessCard({ r, onRunVideo }) {
+  if (!r) return null
+  const items = [
+    ['素材库', r.materials.count > 0, `${r.materials.count} 项（图片 ${r.materials.images}）`],
+    ['分镜脚本', r.storyboard.ready, r.storyboard.ready ? `${r.storyboard.shots} 个镜头` : '未完成'],
+    ['分镜图（首帧）', r.first_frames.ready || r.first_frames.status === 'empty' && r.storyboard.ready === false,
+      r.first_frames.missing?.length ? `缺镜头 ${r.first_frames.missing.join(', ')} 的首帧` : (r.first_frames.ready ? '齐备' : '待生成')],
+  ]
+  return (
+    <div className="readiness">
+      <b>素材就绪清单</b>
+      <ul>{items.map(([name, ok, note], i) => (
+        <li key={i} className={ok ? 'ok' : 'todo'}>{ok ? '✅' : '⬜'} {name} — {note}</li>))}</ul>
+      {r.video_gen.ready
+        ? <div className="ready-banner">🎬 素材已齐备，可以进入视频生成阶段
+            <button onClick={onRunVideo}>进入视频生成</button></div>
+        : <p className="todo-note">补全上述素材后即可进入视频生成</p>}
+    </div>
+  )
+}
+
+function ChatPanel({ pid, readiness, onRunVideo, refreshProject }) {
+  const [state, setState] = useState({ history: [], materials: [], skills: [] })
+  const [input, setInput] = useState('')
+  const [sending, setSending] = useState(false)
+  const [suggest, setSuggest] = useState(null)   // {kind:'@'|'$', items:[names]}
+  const load = useCallback(() =>
+    api(`/projects/${pid}/chat`).then(setState), [pid])
+  useEffect(() => { load() }, [load])
+  const send = async () => {
+    const text = input.trim(); if (!text || sending) return
+    setInput(''); setSuggest(null); setSending(true)
+    try {
+      await api(`/projects/${pid}/chat`, { method: 'POST', body: JSON.stringify({ message: text }) })
+    } catch (e) { alert(e.message) }
+    setSending(false); load()
+  }
+  const onInput = (v) => {
+    setInput(v)
+    const m = /(^|\s)([@$])([\w.\-\u4e00-\u9fff]*)$/.exec(v)
+    if (!m) return setSuggest(null)
+    const kind = m[2], frag = m[3].toLowerCase()
+    const items = kind === '@'
+      ? state.materials.map(m => m.name).filter(n => n.toLowerCase().includes(frag))
+      : state.skills.map(s => s.name.replace(/\.md$/, '')).filter(n => n.toLowerCase().includes(frag))
+    setSuggest({ kind, items: items.slice(0, 6), start: v.length - m[3].length })
+  }
+  const pick = (name) => {
+    setInput(v => v.slice(0, suggest.start) + suggest.kind + name + ' ')
+    setSuggest(null)
+  }
+  return (
+    <div className="chat">
+      <div className="chat-head">💬 对话式素材准备 <span className="hint">@ 引用素材 · $ 调用 skill</span></div>
+      <ReadinessCard r={readiness} onRunVideo={onRunVideo} />
+      <div className="chat-log">
+        {state.history.map((m, i) => (
+          <div key={i} className={m.role}>
+            <span className="who">{m.role === 'user' ? '我' : '助手'}</span>
+            <div className="msg">{m.content}</div>
+            {m.refs?.length > 0 && <div className="refs">{m.refs.map((r, n) =>
+              <span key={n} className="ref">{r.kind === 'skill' ? '$' : '@'}{r.name}</span>)}</div>}
+          </div>))}
+        {!state.history.length && <p className="empty">描述你想做的视频，助手会引导你补全角色、场景、分镜等素材。</p>}
+      </div>
+      {suggest && <ul className="suggest">{suggest.items.map(n =>
+        <li key={n} onClick={() => pick(n)}>{suggest.kind}{n}</li>)}
+        {!suggest.items.length && <li className="empty">无匹配</li>}</ul>}
+      <div className="chat-input">
+        <textarea rows={2} value={input} placeholder="例如：主角是一只 @ref.png 的橘猫，风格用 $电影感，先出 3 个分镜"
+          onChange={e => onInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} />
+        <button disabled={sending} onClick={send}>{sending ? '…' : '发送'}</button>
+      </div>
+    </div>
+  )
+}
+
 function Project({ pid, onBack }) {
   const [data, setData] = useState(null)
   const [drawer, setDrawer] = useState(null)
   const [busy, setBusy] = useState('')
+  const [readiness, setReadiness] = useState(null)
   const refresh = useCallback(() => api(`/projects/${pid}`).then(setData), [pid])
   useEffect(() => { refresh() }, [refresh])
+  useEffect(() => { api(`/projects/${pid}/chat`).then(d => setReadiness(d.readiness)).catch(() => {}) }, [pid, data])
+  const refreshReadiness = useCallback(() =>
+    api(`/projects/${pid}/chat`).then(d => setReadiness(d.readiness)).catch(() => {}), [pid])
   useEffect(() => {
     const es = new EventSource(`/api/projects/${pid}/events`)
     es.addEventListener('stages', e => setData(d => d ? { ...d, stages: JSON.parse(e.data) } : d))
@@ -128,10 +210,11 @@ function Project({ pid, onBack }) {
     setBusy(stage)
     try { await api(`/projects/${pid}/stages/${stage}/runs`, { method: 'POST', body: JSON.stringify({ note: '' }) }) }
     catch (e) { alert(e.message) }
-    setBusy(''); refresh()
+    setBusy(''); refresh(); refreshReadiness()
   }
   return (
-    <div className="page">
+    <div className="page project-layout">
+      <div className="project-main">
       <button onClick={onBack}>← 项目列表</button>
       <h2>{project.name}</h2>
       <details>
@@ -181,6 +264,9 @@ function Project({ pid, onBack }) {
       </div>
       {drawer && <RunDrawer pid={pid} stage={drawer.stage} runId={drawer.runId}
         onClose={() => setDrawer(null)} refresh={refresh} />}
+      </div>
+      <ChatPanel pid={pid} readiness={readiness} refreshProject={refreshReadiness}
+        onRunVideo={() => run('video_gen')} />
     </div>
   )
 }

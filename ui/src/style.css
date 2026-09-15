@@ -19,3 +19,29 @@ textarea, input, select { width: 100%; margin: 4px 0; padding: 6px; border: 1px 
 fieldset { border: 1px solid #ddd; border-radius: 6px; margin: 10px 0; }
 button { background: #1565c0; color: #fff; border: 0; border-radius: 4px; padding: 6px 12px; cursor: pointer; margin: 4px 4px 4px 0; }
 button:disabled { background: #999; }
+
+/* chat panel */
+.project-layout { display: flex; gap: 16px; align-items: flex-start; }
+.project-main { flex: 1 1 auto; min-width: 0; }
+.chat { flex: 0 0 420px; position: sticky; top: 12px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 12px; max-height: calc(100vh - 40px); display: flex; flex-direction: column; }
+.chat-head { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.chat-head .hint { font-weight: 400; color: #888; font-size: 12px; margin-left: 8px; }
+.readiness { background: #f0f7ff; border-radius: 6px; padding: 8px; font-size: 13px; margin-bottom: 8px; }
+.readiness ul { list-style: none; padding: 0; margin: 6px 0; }
+.readiness .ok { color: #2e7d32; }
+.readiness .todo { color: #666; }
+.ready-banner { background: #2e7d32; color: #fff; border-radius: 6px; padding: 8px; margin-top: 6px; font-size: 13px; }
+.ready-banner button { background: #fff; color: #2e7d32; margin-left: 8px; }
+.todo-note { color: #999; font-size: 12px; margin: 4px 0 0; }
+.chat-log { flex: 1 1 auto; overflow-y: auto; min-height: 200px; max-height: 380px; border: 1px solid #eee; border-radius: 6px; padding: 8px; font-size: 13px; }
+.chat-log .user { text-align: right; margin: 6px 0; }
+.chat-log .user .msg { display: inline-block; background: #e3f2fd; border-radius: 8px; padding: 6px 10px; text-align: left; white-space: pre-wrap; }
+.chat-log .assistant .msg { display: inline-block; background: #f5f5f5; border-radius: 8px; padding: 6px 10px; white-space: pre-wrap; }
+.chat-log .who { font-size: 11px; color: #999; display: block; }
+.refs { margin-top: 2px; }
+.ref { display: inline-block; background: #fff3e0; border-radius: 4px; font-size: 11px; padding: 1px 6px; margin-left: 4px; color: #e65100; }
+.suggest { list-style: none; margin: 0; padding: 4px; border: 1px solid #ddd; border-radius: 6px; background: #fff; font-size: 13px; }
+.suggest li { padding: 4px 8px; cursor: pointer; border-radius: 4px; }
+.suggest li:hover { background: #f0f4ff; }
+.chat-input { display: flex; gap: 6px; margin-top: 8px; align-items: flex-end; }
+.chat-input textarea { flex: 1; }

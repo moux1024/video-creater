@@ -36,6 +36,29 @@ def png_bytes(w: int = 8, h: int = 8, rgb: tuple = (66, 133, 244)) -> bytes:
             + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
 
 
+def is_chat_mode(system_prompt: str) -> bool:
+    """Detect the conversational material-prep system prompt."""
+    return "PREPARE materials" in system_prompt or "creative assistant" in system_prompt
+
+
+def mock_chat_reply(system_prompt: str) -> str:
+    """Free-form reply for chat mode; emits the ready marker when prepared."""
+    reply = "好的，我记下了你的要求，会据此引导补全素材。（mock 对话回复）"
+    sb_done = "storyboard: done" in system_prompt
+    ff_done = "first_frames: done" in system_prompt
+    if sb_done and ff_done:
+        reply = ("检查了当前进度：分镜脚本和全部分镜图已就绪。"
+                 "素材已经准备好，可以进入视频生成阶段了。（mock 对话回复）\n"
+                 + "[READY_FOR_VIDEO]")
+    elif sb_done:
+        reply = ("分镜脚本已经有了，但还缺分镜图（首帧）。"
+                 "可以先运行「首帧图生成」阶段，或上传参考图。（mock 对话回复）")
+    else:
+        reply = ("我们先把故事想清楚：主角是谁、在什么场景、想要什么情绪？"
+                 "描述后我来出分镜脚本。（mock 对话回复）")
+    return reply
+
+
 def mock_brain_response(user_prompt: str) -> str:
     """Canned JSON matching the stage schema inferred from the user prompt."""
     import json

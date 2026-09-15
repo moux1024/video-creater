@@ -69,8 +69,11 @@ class ModelClient:
         self.http = http or httpx.AsyncClient(timeout=timeout)
 
     async def chat(self, messages: list[dict], temperature: float = 0.7) -> str:
-        from .mock_models import is_mock, mock_brain_response
+        from .mock_models import is_mock, mock_brain_response, is_chat_mode, mock_chat_reply
         if is_mock(self.cfg.base_url):
+            system = next((m["content"] for m in messages if m["role"] == "system"), "")
+            if is_chat_mode(system):
+                return mock_chat_reply(system)
             user = next((m["content"] for m in reversed(messages)
                          if m["role"] == "user"), "")
             return mock_brain_response(user)

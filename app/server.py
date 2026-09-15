@@ -55,6 +55,10 @@ class AdoptIn(BaseModel):
     output: dict
 
 
+class ChatIn(BaseModel):
+    message: str
+
+
 PROJECTS_DIR = Path(DEFAULT_DIR) / "projects"
 
 
@@ -240,6 +244,33 @@ def build_app(config: AppConfig | None = None, projects_dir: Path | None = None)
             return await eng.poll_video_tasks(pid, run_id)
         except (StageEngineError, ProjectError, KeyError) as ex:
             raise HTTPException(400, str(ex))
+
+    # ---------------- conversational material prep ----------------
+    from .chat import ChatEngine
+
+    def chat_engine() -> ChatEngine:
+        return ChatEngine(app.state.store, app.state.config,
+                          http_factory=None)
+
+    @app.get("/api/projects/{pid}/chat")
+    def get_chat(pid: str):
+        try:
+            eng = chat_engine()
+            return {"history": eng.history(pid),
+                    "readiness": eng.readiness(pid),
+                    "materials": [{"name": m.get("name") or (m.get("ref") or "")[:40],
+                                   "type": m.get("type")} for m in eng.materials(pid)],
+                    "skills": [{"name": s["filename"]} for s in eng.skills(pid)]}
+        except ProjectError as ex:
+            raise HTTPException(404, str(ex))
+
+    @app.post("/api/projects/{pid}/chat")
+    async def post_chat(pid: str, body: ChatIn):
+        try:
+            eng = chat_engine()
+            return await eng.chat(pid, body.message)
+        except ProjectError as ex:
+            raise HTTPException(404, str(ex))
 
     # ---------------- SSE ----------------
     @app.get("/api/projects/{pid}/events")
