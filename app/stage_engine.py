@@ -220,7 +220,8 @@ class StageEngine:
             if shot.get("status") in ("done", "failed"):
                 continue
             from .video_provider import VideoTask
-            task = await provider.poll(VideoTask(shot["provider_task_id"], "rendering"))
+            task = await provider.poll(VideoTask(
+                shot["provider_task_id"], shot.get("status", "submitted")))
             log.emit("video_poll", shot=shot["index"], status=task.status,
                      provider_task_id=task.provider_task_id)
             shot["status"] = task.status

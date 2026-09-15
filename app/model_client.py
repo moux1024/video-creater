@@ -69,6 +69,11 @@ class ModelClient:
         self.http = http or httpx.AsyncClient(timeout=timeout)
 
     async def chat(self, messages: list[dict], temperature: float = 0.7) -> str:
+        from .mock_models import is_mock, mock_brain_response
+        if is_mock(self.cfg.base_url):
+            user = next((m["content"] for m in reversed(messages)
+                         if m["role"] == "user"), "")
+            return mock_brain_response(user)
         url = self.cfg.base_url.rstrip("/") + "/chat/completions"
         headers = {"Authorization": f"Bearer {self.cfg.api_key}"}
         body = {"model": self.cfg.model, "messages": messages, "temperature": temperature}
@@ -111,6 +116,12 @@ class ModelClient:
 
     async def generate_image(self, prompt: str, out_path) -> bytes | None:
         """Image generation via OpenAI-compatible images/generations (best effort)."""
+        from .mock_models import is_mock, png_bytes
+        if is_mock(self.cfg.base_url):
+            blob = png_bytes()
+            with open(out_path, "wb") as f:
+                f.write(blob)
+            return blob
         url = self.cfg.base_url.rstrip("/") + "/images/generations"
         headers = {"Authorization": f"Bearer {self.cfg.api_key}"}
         body = {"model": self.cfg.model, "prompt": prompt, "n": 1,

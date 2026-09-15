@@ -215,3 +215,31 @@ def get_provider(cfg: ModelConfig, http: httpx.AsyncClient | None = None) -> Vid
     if cfg.provider not in PROVIDERS:
         raise KeyError(f"unknown video provider: {cfg.provider!r}; known: {list(PROVIDERS)}")
     return PROVIDERS[cfg.provider](cfg, http)
+
+
+# ---------------------------------------------------------------- mock
+class MockProvider(VideoProvider):
+    """Built-in mock: no HTTP. poll() flips rendering -> done on 2nd call."""
+    name = "mock"
+    _counter = 0
+
+    async def submit(self, opts: SubmitOptions) -> VideoTask:
+        MockProvider._counter += 1
+        return VideoTask(provider_task_id=f"mock-{MockProvider._counter}",
+                         status="submitted")
+
+    async def poll(self, task: VideoTask) -> VideoTask:
+        # first poll -> rendering; afterwards -> done with a URL
+        if task.status in ("submitted",):
+            return VideoTask(provider_task_id=task.provider_task_id,
+                             status="rendering")
+        return VideoTask(provider_task_id=task.provider_task_id, status="done",
+                         video_url=f"mock://{task.provider_task_id}/video.mp4")
+
+    async def download(self, task: VideoTask, out_path) -> None:
+        from ..mock_models import MOCK_MP4
+        with open(out_path, "wb") as f:
+            f.write(MOCK_MP4)
+
+
+PROVIDERS[MockProvider.name] = MockProvider
