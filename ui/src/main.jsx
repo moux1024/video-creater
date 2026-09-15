@@ -119,10 +119,10 @@ function Project({ pid, onBack }) {
   useEffect(() => { refresh() }, [refresh])
   useEffect(() => {
     const es = new EventSource(`/api/projects/${pid}/events`)
-    es.addEventListener('stages', e => setData(d => ({ ...d, stages: JSON.parse(e.data) })))
+    es.addEventListener('stages', e => setData(d => d ? { ...d, stages: JSON.parse(e.data) } : d))
     return () => es.close()
   }, [pid])
-  if (!data) return <p>加载中…</p>
+  if (!data || !data.project) return <p>加载中…</p>
   const { project, stages, skills } = data
   const run = async (stage) => {
     setBusy(stage)
